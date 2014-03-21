@@ -1,13 +1,13 @@
 package buzhash
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	"testing"
 )
 
-// Test the rolling hash property of the buzhash
-func TestRollingHash(t *testing.T) {
-	loremipsum1 := `Lorem ipsum dolor sit amet, consectetuer adipiscing elit.
+var loremipsum1 = `Lorem ipsum dolor sit amet, consectetuer adipiscing elit.
 Aenean commodo ligula eget dolor. Aenean massa. Cum sociis natoque penatibus et
 magnis dis parturient montes, nascetur ridiculus mus. Donec quam felis,
 ultricies nec, pellentesque eu, pretium quis, sem. Nulla consequat massa quis
@@ -32,7 +32,7 @@ nonummy id, metus. Nullam accumsan lorem in dui. Cras ultricies mi eu turpis
 hendrerit fringilla. Vestibulum ante ipsum primis in faucibus orci luctus et
 ultrices posuere cubilia Curae; In ac dui quis mi consectetuer lacinia.`
 
-	loremipsum2 := `Nam pretium turpis et arcu. Duis arcu tortor, suscipit eget,
+var loremipsum2 = `Nam pretium turpis et arcu. Duis arcu tortor, suscipit eget,
 imperdiet nec, imperdiet iaculis, ipsum. Sed aliquam ultrices mauris. Integer
 ante arcu, accumsan a, consectetuer eget, posuere ut, mauris. Praesent
 adipiscing. Phasellus ullamcorper ipsum rutrum nunc. Nunc nonummy metus.
@@ -51,6 +51,8 @@ placerat dolor lectus quis orci. Phasellus consectetuer vestibulum elit. Aenean
 tellus metus, bibendum sed, posuere ac, mattis non, nunc. Vestibulum fringilla
 pede sit amet augue. In turpis. Pellentesque posuere. Praesent turpis.`
 
+// Test the rolling hash property of the buzhash
+func TestRollingHash(t *testing.T) {
 	phrase1 := "Aenean massa. Cum sociis natoque"
 	phrase2 := "Phasellus leo dolor, tempus non, auctor et, hendrerit quis, nisi"
 
@@ -88,5 +90,26 @@ pede sit amet augue. In turpis. Pellentesque posuere. Praesent turpis.`
 
 	if !found {
 		t.Errorf("Could not find '%s' by its checksum %08x.", phrase2, p2sum)
+	}
+}
+
+func TestSum(t *testing.T) {
+	h := NewBuzHash(16)
+	fmt.Fprint(h, loremipsum1)
+
+	sum32 := h.Sum32()
+	sumBytes := h.Sum(nil)
+
+	if l := len(sumBytes); l != 4 {
+		t.Fatalf("h.Sum() returned slice of len %d, expected 4", l)
+	}
+
+	var sumBytesAsNum uint32
+	if err := binary.Read(bytes.NewBuffer(sumBytes), binary.LittleEndian, &sumBytesAsNum); err != nil {
+		t.Fatalf("Could not read binary number? %s", err)
+	}
+
+	if sum32 != sumBytesAsNum {
+		t.Errorf("Sum32 (%08x) and Sum (%08x) returned different sums!", sum32, sumBytesAsNum)
 	}
 }
